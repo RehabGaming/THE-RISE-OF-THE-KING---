@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 /// <summary>
 /// Manages drag-and-drop functionality for objects, including snapping to slots and maintaining original positions.
@@ -46,6 +47,17 @@ public class DragAndDrop : MonoBehaviour
     private SpriteRenderer spriteRenderer;
 
     /// <summary>
+    /// Input Action Asset managing all input actions for the object.
+    /// Used to define actions like dragging (Drag) and enables support
+    /// for various input devices such as mouse, touchscreens, or joysticks.
+    /// </summary> 
+    [Header("Input System")]
+    [Tooltip("Reference to the Drag Input Action.")]
+    public InputActionAsset inputActions;
+    // Specific input action for drag
+    private InputAction dragAction;
+
+    /// <summary>
     /// Initializes the object's default settings, such as position, scale, and sorting order.
     /// </summary>
     void Start()
@@ -74,6 +86,10 @@ public class DragAndDrop : MonoBehaviour
         originalSortingOrder = spriteRenderer.sortingOrder;
 
         Debug.Log($"Start Local Position: {startLocalPosition}");
+
+        // Initialize Drag Action
+        dragAction = inputActions.FindAction("Drag");
+        dragAction.Enable();
     }
 
     /// <summary>
@@ -83,25 +99,9 @@ public class DragAndDrop : MonoBehaviour
     {
         if (isDragging)
         {
-            Vector3 newPosition;
-
-            // Update position based on mouse or touch input
-            if (Input.GetMouseButton(0))
-            {
-                newPosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-            }
-            else if (Input.touchCount > 0)
-            {
-                Touch touch = Input.GetTouch(0);
-                newPosition = Camera.main.ScreenToWorldPoint(touch.position);
-            }
-            else
-            {
-                return; // Do not update if there's no input
-            }
-
-            // Set the new position while maintaining a Z value of 0
-            transform.position = new Vector3(newPosition.x, newPosition.y, 0);
+            Vector2 pointerPosition = dragAction.ReadValue<Vector2>();
+            Vector3 worldPosition = Camera.main.ScreenToWorldPoint(new Vector3(pointerPosition.x, pointerPosition.y, Camera.main.nearClipPlane));
+            transform.position = new Vector3(worldPosition.x, worldPosition.y, 0);
         }
     }
 
