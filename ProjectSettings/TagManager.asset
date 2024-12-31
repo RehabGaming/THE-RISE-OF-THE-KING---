@@ -4,8 +4,7 @@
 TagManager:
   serializedVersion: 3
   tags:
-  - Slot
-  - ExplanationSlide
+  - Exit
   layers:
   - Default
   - TransparentFX
@@ -42,12 +41,6 @@ TagManager:
   m_SortingLayers:
   - name: Default
     uniqueID: 0
-    locked: 0
-  - name: Background
-    uniqueID: 514985169
-    locked: 0
-  - name: PreviewLayer
-    uniqueID: 44943317
     locked: 0
   m_RenderingLayers:
   - Default
