@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.UI;
 
 /// <summary>
 /// Manages drag-and-drop functionality for objects, including snapping to slots and maintaining original positions.

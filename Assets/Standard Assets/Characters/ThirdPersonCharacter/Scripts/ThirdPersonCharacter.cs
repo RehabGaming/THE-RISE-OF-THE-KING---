@@ -2,201 +2,224 @@ using UnityEngine;
 
 namespace UnityStandardAssets.Characters.ThirdPerson
 {
-    // This script controls the third-person character's movement, animation, and physics interactions.
+	[RequireComponent(typeof(Rigidbody))]
+	[RequireComponent(typeof(CapsuleCollider))]
+	[RequireComponent(typeof(Animator))]
+	public class ThirdPersonCharacter : MonoBehaviour
+	{
+		[SerializeField] float m_MovingTurnSpeed = 360;
+		[SerializeField] float m_StationaryTurnSpeed = 180;
+		[SerializeField] float m_JumpPower = 12f;
+		[Range(1f, 4f)][SerializeField] float m_GravityMultiplier = 2f;
+		[SerializeField] float m_RunCycleLegOffset = 0.2f; //specific to the character in sample assets, will need to be modified to work with others
+		[SerializeField] float m_MoveSpeedMultiplier = 1f;
+		[SerializeField] float m_AnimSpeedMultiplier = 1f;
+		[SerializeField] float m_GroundCheckDistance = 0.1f;
 
-    [RequireComponent(typeof(Rigidbody))] // Ensures a Rigidbody component is attached to the GameObject.
-    [RequireComponent(typeof(CapsuleCollider))] // Ensures a CapsuleCollider component is attached to the GameObject.
-    [RequireComponent(typeof(Animator))] // Ensures an Animator component is attached to the GameObject.
-    public class ThirdPersonCharacter : MonoBehaviour
-    {
-        // Public variables exposed in the Unity Inspector for fine-tuning character behavior.
-        [SerializeField] float m_MovingTurnSpeed = 360; // Turn speed while moving.
-        [SerializeField] float m_StationaryTurnSpeed = 180; // Turn speed while stationary.
-        [SerializeField] float m_JumpPower = 12f; // Vertical jump force.
-        [Range(1f, 4f)][SerializeField] float m_GravityMultiplier = 2f; // Multiplier to increase gravity effect for realistic falls.
-        [SerializeField] float m_RunCycleLegOffset = 0.2f; // Offset for running animation cycle to synchronize leg movement.
-        [SerializeField] float m_MoveSpeedMultiplier = 1f; // Multiplier for character movement speed.
-        [SerializeField] float m_AnimSpeedMultiplier = 1f; // Multiplier for animation playback speed.
-        [SerializeField] float m_GroundCheckDistance = 0.1f; // Distance used to check if the character is grounded.
+		Rigidbody m_Rigidbody;
+		Animator m_Animator;
+		bool m_IsGrounded;
+		float m_OrigGroundCheckDistance;
+		const float k_Half = 0.5f;
+		float m_TurnAmount;
+		float m_ForwardAmount;
+		Vector3 m_GroundNormal;
+		float m_CapsuleHeight;
+		Vector3 m_CapsuleCenter;
+		CapsuleCollider m_Capsule;
+		bool m_Crouching;
 
-        // Internal variables for managing components and state.
-        Rigidbody m_Rigidbody; // Reference to the Rigidbody component.
-        Animator m_Animator; // Reference to the Animator component.
-        bool m_IsGrounded; // Tracks if the character is on the ground.
-        float m_OrigGroundCheckDistance; // Stores the original ground check distance.
-        const float k_Half = 0.5f; // Constant for dividing values by 2.
-        float m_TurnAmount; // Amount to turn the character.
-        float m_ForwardAmount; // Amount to move forward.
-        Vector3 m_GroundNormal; // Normal vector of the ground surface.
-        float m_CapsuleHeight; // Original height of the CapsuleCollider.
-        Vector3 m_CapsuleCenter; // Original center of the CapsuleCollider.
-        CapsuleCollider m_Capsule; // Reference to the CapsuleCollider component.
-        bool m_Crouching; // Tracks if the character is crouching.
 
-        void Start()
-        {
-            // Initialize component references and setup default values.
-            m_Animator = GetComponent<Animator>();
-            m_Rigidbody = GetComponent<Rigidbody>();
-            m_Capsule = GetComponent<CapsuleCollider>();
-            m_CapsuleHeight = m_Capsule.height;
-            m_CapsuleCenter = m_Capsule.center;
+		void Start()
+		{
+			m_Animator = GetComponent<Animator>();
+			m_Rigidbody = GetComponent<Rigidbody>();
+			m_Capsule = GetComponent<CapsuleCollider>();
+			m_CapsuleHeight = m_Capsule.height;
+			m_CapsuleCenter = m_Capsule.center;
 
-            // Freeze rotations to prevent unintended physics interactions.
-            m_Rigidbody.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationZ;
-            m_OrigGroundCheckDistance = m_GroundCheckDistance;
-        }
+			m_Rigidbody.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationZ;
+			m_OrigGroundCheckDistance = m_GroundCheckDistance;
+		}
 
-        // Handles character movement, crouching, and jumping.
-        public void Move(Vector3 move, bool crouch, bool jump)
-        {
-            if (move.magnitude > 1f) move.Normalize(); // Normalize movement vector to maintain consistent speed.
-            move = transform.InverseTransformDirection(move); // Convert movement to local space.
-            CheckGroundStatus(); // Determine if the character is grounded.
-            move = Vector3.ProjectOnPlane(move, m_GroundNormal); // Adjust movement to align with the ground's surface.
-            m_TurnAmount = Mathf.Atan2(move.x, move.z); // Calculate turn amount based on movement direction.
-            m_ForwardAmount = move.z; // Forward movement value.
 
-            ApplyExtraTurnRotation(); // Apply additional rotation for smoother turning.
+		public void Move(Vector3 move, bool crouch, bool jump)
+		{
 
-            if (m_IsGrounded)
-            {
-                HandleGroundedMovement(crouch, jump); // Manage movement while on the ground.
-            }
-            else
-            {
-                HandleAirborneMovement(); // Manage movement while airborne.
-            }
+			// convert the world relative moveInput vector into a local-relative
+			// turn amount and forward amount required to head in the desired
+			// direction.
+			if (move.magnitude > 1f) move.Normalize();
+			move = transform.InverseTransformDirection(move);
+			CheckGroundStatus();
+			move = Vector3.ProjectOnPlane(move, m_GroundNormal);
+			m_TurnAmount = Mathf.Atan2(move.x, move.z);
+			m_ForwardAmount = move.z;
 
-            ScaleCapsuleForCrouching(crouch); // Adjust CapsuleCollider size for crouching.
-            PreventStandingInLowHeadroom(); // Prevent standing up in areas with low ceilings.
+			ApplyExtraTurnRotation();
 
-            UpdateAnimator(move); // Update animation parameters.
-        }
+			// control and velocity handling is different when grounded and airborne:
+			if (m_IsGrounded)
+			{
+				HandleGroundedMovement(crouch, jump);
+			}
+			else
+			{
+				HandleAirborneMovement();
+			}
 
-        // Adjusts the CapsuleCollider size when crouching.
-        void ScaleCapsuleForCrouching(bool crouch)
-        {
-            if (m_IsGrounded && crouch)
-            {
-                if (m_Crouching) return; // Exit if already crouching.
-                m_Capsule.height = m_Capsule.height / 2f; // Halve the height of the collider.
-                m_Capsule.center = m_Capsule.center / 2f; // Adjust the center accordingly.
-                m_Crouching = true; // Mark as crouching.
-            }
-            else
-            {
-                // Check if there's enough headroom to stand up.
-                Ray crouchRay = new Ray(m_Rigidbody.position + Vector3.up * m_Capsule.radius * k_Half, Vector3.up);
-                float crouchRayLength = m_CapsuleHeight - m_Capsule.radius * k_Half;
-                if (Physics.SphereCast(crouchRay, m_Capsule.radius * k_Half, crouchRayLength, Physics.AllLayers, QueryTriggerInteraction.Ignore))
-                {
-                    m_Crouching = true; // Stay crouched if there’s an obstacle above.
-                    return;
-                }
-                m_Capsule.height = m_CapsuleHeight; // Restore the original height.
-                m_Capsule.center = m_CapsuleCenter; // Restore the original center.
-                m_Crouching = false; // Mark as not crouching.
-            }
-        }
+			ScaleCapsuleForCrouching(crouch);
+			PreventStandingInLowHeadroom();
 
-        // Prevents the character from standing up in areas with low ceilings.
-        void PreventStandingInLowHeadroom()
-        {
-            if (!m_Crouching)
-            {
-                Ray crouchRay = new Ray(m_Rigidbody.position + Vector3.up * m_Capsule.radius * k_Half, Vector3.up);
-                float crouchRayLength = m_CapsuleHeight - m_Capsule.radius * k_Half;
-                if (Physics.SphereCast(crouchRay, m_Capsule.radius * k_Half, crouchRayLength, Physics.AllLayers, QueryTriggerInteraction.Ignore))
-                {
-                    m_Crouching = true; // Enforce crouching if there's not enough headroom.
-                }
-            }
-        }
+			// send input and other state parameters to the animator
+			UpdateAnimator(move);
+		}
 
-        // Updates animation parameters based on movement and state.
-        void UpdateAnimator(Vector3 move)
-        {
-            m_Animator.SetFloat("Forward", m_ForwardAmount, 0.1f, Time.deltaTime); // Set forward movement value.
-            m_Animator.SetFloat("Turn", m_TurnAmount, 0.1f, Time.deltaTime); // Set turning value.
-            m_Animator.SetBool("Crouch", m_Crouching); // Set crouching state.
-            m_Animator.SetBool("OnGround", m_IsGrounded); // Set grounded state.
 
-            if (!m_IsGrounded)
-            {
-                m_Animator.SetFloat("Jump", m_Rigidbody.linearVelocity.y); // Update jump animation based on vertical velocity.
-            }
+		void ScaleCapsuleForCrouching(bool crouch)
+		{
+			if (m_IsGrounded && crouch)
+			{
+				if (m_Crouching) return;
+				m_Capsule.height = m_Capsule.height / 2f;
+				m_Capsule.center = m_Capsule.center / 2f;
+				m_Crouching = true;
+			}
+			else
+			{
+				Ray crouchRay = new Ray(m_Rigidbody.position + Vector3.up * m_Capsule.radius * k_Half, Vector3.up);
+				float crouchRayLength = m_CapsuleHeight - m_Capsule.radius * k_Half;
+				if (Physics.SphereCast(crouchRay, m_Capsule.radius * k_Half, crouchRayLength, Physics.AllLayers, QueryTriggerInteraction.Ignore))
+				{
+					m_Crouching = true;
+					return;
+				}
+				m_Capsule.height = m_CapsuleHeight;
+				m_Capsule.center = m_CapsuleCenter;
+				m_Crouching = false;
+			}
+		}
 
-            // Adjust animation speed based on movement and grounded state.
-            if (m_IsGrounded && move.magnitude > 0)
-            {
-                m_Animator.speed = m_AnimSpeedMultiplier; // Use custom speed multiplier.
-            }
-            else
-            {
-                m_Animator.speed = 1; // Default speed while airborne or idle.
-            }
-        }
+		void PreventStandingInLowHeadroom()
+		{
+			// prevent standing up in crouch-only zones
+			if (!m_Crouching)
+			{
+				Ray crouchRay = new Ray(m_Rigidbody.position + Vector3.up * m_Capsule.radius * k_Half, Vector3.up);
+				float crouchRayLength = m_CapsuleHeight - m_Capsule.radius * k_Half;
+				if (Physics.SphereCast(crouchRay, m_Capsule.radius * k_Half, crouchRayLength, Physics.AllLayers, QueryTriggerInteraction.Ignore))
+				{
+					m_Crouching = true;
+				}
+			}
+		}
 
-        // Applies extra gravity force for more realistic airborne behavior.
-        void HandleAirborneMovement()
-        {
-            Vector3 extraGravityForce = (Physics.gravity * m_GravityMultiplier) - Physics.gravity;
-            m_Rigidbody.AddForce(extraGravityForce);
 
-            m_GroundCheckDistance = m_Rigidbody.linearVelocity.y < 0 ? m_OrigGroundCheckDistance : 0.01f; // Adjust ground check sensitivity.
-        }
+		void UpdateAnimator(Vector3 move)
+		{
+			// update the animator parameters
+			m_Animator.SetFloat("Forward", m_ForwardAmount, 0.1f, Time.deltaTime);
+			m_Animator.SetFloat("Turn", m_TurnAmount, 0.1f, Time.deltaTime);
+			m_Animator.SetBool("Crouch", m_Crouching);
+			m_Animator.SetBool("OnGround", m_IsGrounded);
+			if (!m_IsGrounded)
+			{
+				m_Animator.SetFloat("Jump", m_Rigidbody.linearVelocity.y);
+			}
 
-        // Handles grounded movement, including jumping.
-        void HandleGroundedMovement(bool crouch, bool jump)
-        {
-            if (jump && !crouch && m_Animator.GetCurrentAnimatorStateInfo(0).IsName("Grounded"))
-            {
-                m_Rigidbody.linearVelocity = new Vector3(m_Rigidbody.linearVelocity.x, m_JumpPower, m_Rigidbody.linearVelocity.z); // Apply jump force.
-                m_IsGrounded = false; // Mark as airborne.
-                m_Animator.applyRootMotion = false; // Disable root motion during jump.
-                m_GroundCheckDistance = 0.1f; // Reset ground check distance.
-            }
-        }
+			// calculate which leg is behind, so as to leave that leg trailing in the jump animation
+			// (This code is reliant on the specific run cycle offset in our animations,
+			// and assumes one leg passes the other at the normalized clip times of 0.0 and 0.5)
+			float runCycle =
+				Mathf.Repeat(
+					m_Animator.GetCurrentAnimatorStateInfo(0).normalizedTime + m_RunCycleLegOffset, 1);
+			float jumpLeg = (runCycle < k_Half ? 1 : -1) * m_ForwardAmount;
+			if (m_IsGrounded)
+			{
+				m_Animator.SetFloat("JumpLeg", jumpLeg);
+			}
 
-        // Adds extra rotation for smoother turning.
-        void ApplyExtraTurnRotation()
-        {
-            float turnSpeed = Mathf.Lerp(m_StationaryTurnSpeed, m_MovingTurnSpeed, m_ForwardAmount);
-            transform.Rotate(0, m_TurnAmount * turnSpeed * Time.deltaTime, 0);
-        }
+			// the anim speed multiplier allows the overall speed of walking/running to be tweaked in the inspector,
+			// which affects the movement speed because of the root motion.
+			if (m_IsGrounded && move.magnitude > 0)
+			{
+				m_Animator.speed = m_AnimSpeedMultiplier;
+			}
+			else
+			{
+				// don't use that while airborne
+				m_Animator.speed = 1;
+			}
+		}
 
-        // Adjusts root motion velocity for grounded movement.
-        public void OnAnimatorMove()
-        {
-            if (m_IsGrounded && Time.deltaTime > 0)
-            {
-                Vector3 v = (m_Animator.deltaPosition * m_MoveSpeedMultiplier) / Time.deltaTime;
-                v.y = m_Rigidbody.linearVelocity.y; // Preserve vertical velocity.
-                m_Rigidbody.linearVelocity = v;
-            }
-        }
 
-        // Checks if the character is grounded and updates related state.
-        void CheckGroundStatus()
-        {
-            RaycastHit hitInfo;
+		void HandleAirborneMovement()
+		{
+			// apply extra gravity from multiplier:
+			Vector3 extraGravityForce = (Physics.gravity * m_GravityMultiplier) - Physics.gravity;
+			m_Rigidbody.AddForce(extraGravityForce);
+
+			m_GroundCheckDistance = m_Rigidbody.linearVelocity.y < 0 ? m_OrigGroundCheckDistance : 0.01f;
+		}
+
+
+		void HandleGroundedMovement(bool crouch, bool jump)
+		{
+			// check whether conditions are right to allow a jump:
+			if (jump && !crouch && m_Animator.GetCurrentAnimatorStateInfo(0).IsName("Grounded"))
+			{
+				// jump!
+				m_Rigidbody.linearVelocity = new Vector3(m_Rigidbody.linearVelocity.x, m_JumpPower, m_Rigidbody.linearVelocity.z);
+				m_IsGrounded = false;
+				m_Animator.applyRootMotion = false;
+				m_GroundCheckDistance = 0.1f;
+			}
+		}
+
+		void ApplyExtraTurnRotation()
+		{
+			// help the character turn faster (this is in addition to root rotation in the animation)
+			float turnSpeed = Mathf.Lerp(m_StationaryTurnSpeed, m_MovingTurnSpeed, m_ForwardAmount);
+			transform.Rotate(0, m_TurnAmount * turnSpeed * Time.deltaTime, 0);
+		}
+
+
+		public void OnAnimatorMove()
+		{
+			// we implement this function to override the default root motion.
+			// this allows us to modify the positional speed before it's applied.
+			if (m_IsGrounded && Time.deltaTime > 0)
+			{
+				Vector3 v = (m_Animator.deltaPosition * m_MoveSpeedMultiplier) / Time.deltaTime;
+
+				// we preserve the existing y part of the current velocity.
+				v.y = m_Rigidbody.linearVelocity.y;
+				m_Rigidbody.linearVelocity = v;
+			}
+		}
+
+
+		void CheckGroundStatus()
+		{
+			RaycastHit hitInfo;
 #if UNITY_EDITOR
-            // Visualize the ground check ray in the Scene view for debugging.
-            Debug.DrawLine(transform.position + (Vector3.up * 0.1f), transform.position + (Vector3.up * 0.1f) + (Vector3.down * m_GroundCheckDistance));
+			// helper to visualise the ground check ray in the scene view
+			Debug.DrawLine(transform.position + (Vector3.up * 0.1f), transform.position + (Vector3.up * 0.1f) + (Vector3.down * m_GroundCheckDistance));
 #endif
-            if (Physics.Raycast(transform.position + (Vector3.up * 0.1f), Vector3.down, out hitInfo, m_GroundCheckDistance))
-            {
-                m_GroundNormal = hitInfo.normal; // Store the ground's normal vector.
-                m_IsGrounded = true; // Mark as grounded.
-                m_Animator.applyRootMotion = true; // Enable root motion.
-            }
-            else
-            {
-                m_IsGrounded = false; // Mark as airborne.
-                m_GroundNormal = Vector3.up; // Default ground normal to up direction.
-                m_Animator.applyRootMotion = false; // Disable root motion.
-            }
-        }
-    }
+			// 0.1f is a small offset to start the ray from inside the character
+			// it is also good to note that the transform position in the sample assets is at the base of the character
+			if (Physics.Raycast(transform.position + (Vector3.up * 0.1f), Vector3.down, out hitInfo, m_GroundCheckDistance))
+			{
+				m_GroundNormal = hitInfo.normal;
+				m_IsGrounded = true;
+				m_Animator.applyRootMotion = true;
+			}
+			else
+			{
+				m_IsGrounded = false;
+				m_GroundNormal = Vector3.up;
+				m_Animator.applyRootMotion = false;
+			}
+		}
+	}
 }

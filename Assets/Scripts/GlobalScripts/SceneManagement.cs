@@ -22,6 +22,8 @@ public class SceneManagement : MonoBehaviour
 
     [Tooltip("The Intro screen scene name to load after skipping or finishing the explanation.")]
     public string introSceneName;
+    //[SerializeField] private LevelCompletionDisplay levelUpDisplay;
+
 
     /// <summary>
     /// Subscribes to the sceneLoaded event when the object is enabled.
@@ -39,15 +41,17 @@ public class SceneManagement : MonoBehaviour
     /// Handles actions after a scene is loaded, particularly updating explanation slides.
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        Debug.Log($"Scene loaded: {scene.name}");
-        if (scene.name == introSceneName && SingletonManager.Instance.explanationManager != null)
+        Debug.Log($"[SceneManagement] Scene loaded: {scene.name}");
+        if (scene.name == introSceneName && SingletonManager.singltoneInstance.explanationManager != null)
         {
-            SingletonManager.Instance.explanationManager.UpdateExplanationSlides();
+            SingletonManager.singltoneInstance.explanationManager.UpdateExplanationSlides();
         }
-        else if (SingletonManager.Instance.explanationManager == null)
+        else if (SingletonManager.singltoneInstance.explanationManager == null)
         {
             Debug.LogError("ExplanationManager is not assigned or has been destroyed.");
         }
+        Debug.Log($"[SingletonManager] Scene loaded: {scene.name}. Reinitializing components...");
+        //SingletonManager.singltoneInstance.InitializeComponents();
     }
 
     /// <summary>
@@ -106,6 +110,7 @@ public class SceneManagement : MonoBehaviour
     private IEnumerator TransitionToNextLevel(int levelIndex)
     {
         yield return new WaitForSeconds(levelTransitionDelay);
-        SceneManager.LoadScene(levelNames[levelIndex]);
+        LoadLevel(levelIndex);
+        //SceneManager.LoadScene(levelNames[levelIndex]);
     }
 }

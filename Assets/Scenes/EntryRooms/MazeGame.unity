@@ -988,7 +988,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f8a203db1f8a14a41b4fcb4c6e547e3b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  sceneToLoad: FirstLevelScene
+  sceneToLoad: level1
   delayBeforeTransition: 0
 --- !u!1 &471426003
 GameObject:

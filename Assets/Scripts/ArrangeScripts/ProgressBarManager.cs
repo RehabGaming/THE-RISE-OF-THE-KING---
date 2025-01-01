@@ -10,10 +10,10 @@ public class ProgressBarManager : MonoBehaviour
 {
     [Header("Progress Tracking")]
     [Tooltip("Tracks the current progress based on the number of items placed in the correct slots.")]
-    public int currentProgress;
+    [SerializeField] private int currentProgress;
 
     [Tooltip("The total number of items required to complete the level.")]
-    public int totalItems;
+    [SerializeField] private int totalItems;
 
     [Header("Progress Bar UI")]
     [Tooltip("Array of sprites representing different progress stages.")]
@@ -21,6 +21,9 @@ public class ProgressBarManager : MonoBehaviour
 
     [Tooltip("The UI Image component that displays the current progress.")]
     public Image progressBarImage;
+
+    [Header("References")]
+    [SerializeField] private ScoreManager scoreManager;
 
     [Header("Audio Settings")]
     [Tooltip("Sound played when progress is updated.")]
@@ -30,11 +33,13 @@ public class ProgressBarManager : MonoBehaviour
     public AudioClip levelEndSound;
 
     private AudioSource audioSource;
+    private SceneManagement sceneManagement;
 
     private void Start()
     {
         // Add AudioSource if not already attached
         audioSource = gameObject.AddComponent<AudioSource>();
+       // TimeTracker.TimeTrackingInstance.StartTracking();
     }
 
     /// <summary>
@@ -42,8 +47,8 @@ public class ProgressBarManager : MonoBehaviour
     /// </summary>
     /// <param name="itemsCount">Total items required for level completion.</param>
     public void InitializeProgressBar(int itemsCount)
-    {
-
+    {           
+        //totalItems = itemsCount;
         Debug.Log($"Initializing Progress Bar with {itemsCount} items.");
         UpdateProgressBar();
     }
@@ -57,6 +62,14 @@ public class ProgressBarManager : MonoBehaviour
         {
             currentProgress++;
             UpdateProgressBar();
+            if (scoreManager != null)
+            {
+                scoreManager.AddScore();
+            }
+            else
+            {
+                Debug.LogWarning("ScoreManager is not assigned in ProgressBarManager!");
+            }
 
             // Play progress sound
             if (progressSound != null && currentProgress < totalItems)
@@ -66,21 +79,32 @@ public class ProgressBarManager : MonoBehaviour
         }
         Debug.Log("Total items: " + totalItems + ". And Current Progress: " + currentProgress);
         // Check if the level is complete
-        if (currentProgress == totalItems && levelEndSound != null)
+        if (currentProgress == totalItems)
         {
-            audioSource.PlayOneShot(levelEndSound);
-            Debug.Log("Level Complete!");
-
-            // Call the CompleteLevel function
-            if (SingletonManager.Instance != null && SingletonManager.Instance.sceneManagement != null)
+            // Play level completion sound
+            if (levelEndSound != null)
             {
-                SingletonManager.Instance.sceneManagement.CompleteLevel();
+                audioSource.PlayOneShot(levelEndSound);
             }
             else
             {
-                Debug.LogError("SingletonManager or SceneManagement instance is not found!");
+                Debug.Log("Audio source of End Level not found!");
             }
 
+            Debug.Log("[ProgressBarManager] Level Complete!");
+
+            // Notify SceneManagement to handle level completion
+            if (SingletonManager.singltoneInstance != null && SingletonManager.singltoneInstance.sceneManagement != null)
+            {
+                SingletonManager.singltoneInstance.GetComponent<LevelUpManager>().ShowLevelUpScreen();
+
+               //SingletonManager.singltoneInstance.sceneManagement.CompleteLevel();
+            }
+            else
+            {
+                Debug.LogError("[ProgressBarManager] LevelUpManager instance not found in SingletonManager!");
+                Debug.LogError("[ProgressBarManager] SceneManagement or singltoneInstance instance not found!");
+            }
         }
     }
 

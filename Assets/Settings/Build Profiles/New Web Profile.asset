@@ -17,18 +17,38 @@ MonoBehaviour:
   m_Subtarget: 0
   m_PlatformId: 84a3bb9e7420477f885e98145999eb20
   m_PlatformBuildProfile:
-    rid: 2879495788470206465
-  m_OverrideGlobalSceneList: 0
+    rid: 4638968578767847425
+  m_OverrideGlobalSceneList: 1
   m_Scenes:
   - m_enabled: 1
-    m_path: Assets/Scenes/King's_Room_L1.unity
+    m_path: Assets/Scenes/OpeningScene.unity
+  - m_enabled: 1
+    m_path: Assets/Scenes/KingsLobby.unity
+  - m_enabled: 1
+    m_path: Assets/Scenes/EntryRooms/ArrangeGame.unity
+  - m_enabled: 1
+    m_path: Assets/Scenes/EntryRooms/DefendGame.unity
+  - m_enabled: 1
+    m_path: Assets/Scenes/EntryRooms/MazeGame.unity
+  - m_enabled: 1
+    m_path: Assets/Scenes/Maze/VictoryScene.unity
+  - m_enabled: 1
+    m_path: Assets/Scenes/Arrange/King's_Room_L1.unity
+  - m_enabled: 1
+    m_path: Assets/Scenes/Arrange/King's_Room_L2.unity
+  - m_enabled: 1
+    m_path: Assets/Scenes/Arrange/King's_Room_L3.unity
+  - m_enabled: 1
+    m_path: Assets/Scenes/End.unity
+  - m_enabled: 1
+    m_path: Assets/Scenes/Invaders/SecondLevelScene.unity
   m_ScriptingDefines: []
   m_PlayerSettingsYaml:
     m_Settings: []
   references:
     version: 2
     RefIds:
-    - rid: 2879495788470206465
+    - rid: 4638968578767847425
       type: {class: WebGLPlatformSettings, ns: UnityEditor.WebGL, asm: UnityEditor.WebGL.Extensions}
       data:
         m_Development: 0

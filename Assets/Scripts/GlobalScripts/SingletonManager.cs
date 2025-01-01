@@ -6,12 +6,13 @@ using UnityEngine.SceneManagement;
 /// </summary>
 public class SingletonManager : MonoBehaviour
 {
-    public static SingletonManager Instance { get; private set; }
+    public static SingletonManager singltoneInstance { get; private set; }
 
     public string managedSceneName;
 
     public SceneManagement sceneManagement;
     public ExplanationManager explanationManager;
+    // public LevelCompletionDisplay completionDisplay;
 
     [Header("Managed Scenes")]
     [Tooltip("Scenes that this GameManager will manage.")]
@@ -25,16 +26,16 @@ public class SingletonManager : MonoBehaviour
 
         if (managedSceneName == SceneManager.GetActiveScene().name)
         {
-            if (Instance != null && Instance != this)
+            if (singltoneInstance != null && singltoneInstance != this)
             {
                 Debug.Log("Destroying old GameManager instance for new scene-specific instance.");
-                Destroy(Instance.gameObject);
+                Destroy(singltoneInstance.gameObject);
             }
             else
             {
                 Debug.Log("No existing instance found or current instance is the singleton. Setting as Singleton.");
             }
-            Instance = this;
+            singltoneInstance = this;
             DontDestroyOnLoad(gameObject);
             Debug.Log("GameManager set as DontDestroyOnLoad for " + managedSceneName);
             // Initialize other components
@@ -49,20 +50,28 @@ public class SingletonManager : MonoBehaviour
 
     /// <summary>
     /// Initializes necessary components for scene and explanation management.
-    private void InitializeComponents()
+    public void InitializeComponents()
     {
+        Debug.Log("[SingletonManager] Initializing components...");
         // Assuming that these components are attached to the same GameObject as the SingletonManager
         sceneManagement = GetComponent<SceneManagement>();
         explanationManager = GetComponent<ExplanationManager>();
-
         // If they are not found, instantiate them or log an error
         if (sceneManagement == null)
         {
             sceneManagement = gameObject.AddComponent<SceneManagement>();
         }
+        else
+        {
+            Debug.Log("[SingletonManager] sceneManagement component null.");
+        }
         if (explanationManager == null)
         {
             explanationManager = gameObject.AddComponent<ExplanationManager>();
+        }
+        else
+        {
+            Debug.Log("[SingletonManager] explanationManager component null.");
         }
     }
 }
