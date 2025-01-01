@@ -31,6 +31,8 @@ MonoBehaviour:
   - m_enabled: 1
     m_path: Assets/Scenes/EntryRooms/MazeGame.unity
   - m_enabled: 1
+    m_path: Assets/Scenes/Maze/level1.unity
+  - m_enabled: 1
     m_path: Assets/Scenes/Maze/VictoryScene.unity
   - m_enabled: 1
     m_path: Assets/Scenes/Arrange/King's_Room_L1.unity
@@ -40,8 +42,6 @@ MonoBehaviour:
     m_path: Assets/Scenes/Arrange/King's_Room_L3.unity
   - m_enabled: 1
     m_path: Assets/Scenes/End.unity
-  - m_enabled: 1
-    m_path: Assets/Scenes/Invaders/SecondLevelScene.unity
   m_ScriptingDefines: []
   m_PlayerSettingsYaml:
     m_Settings: []
